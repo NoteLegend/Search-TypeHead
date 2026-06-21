@@ -9,8 +9,6 @@ const CSV_PATH = path.join(__dirname, '../../amazon_products.csv');
 const TARGET_COUNT = 105000; // Seed slightly over 100k queries
 const BATCH_SIZE = 5000;
 
-const LOCATIONS = ['US', 'IN', 'GB', 'CA', 'AU', 'DE', 'FR'];
-
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
@@ -147,9 +145,6 @@ async function seed() {
       trending_score = Math.random() * 5; // 0 to 5
     }
 
-    // Randomize location
-    const user_location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
-    
     // Randomize timestamp within the last 7 days
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() - Math.random() * 7);
@@ -158,7 +153,6 @@ async function seed() {
       query,
       frequency,
       trending_score,
-      user_location,
       timestamp
     });
 

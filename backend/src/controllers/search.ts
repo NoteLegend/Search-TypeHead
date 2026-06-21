@@ -3,17 +3,15 @@ import { QueueService } from '../services/queue';
 
 export const recordSearch = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { query, location } = req.body;
+    const { query } = req.body;
 
     if (!query || typeof query !== 'string' || query.trim() === '') {
       res.status(400).json({ error: 'Bad Request', message: 'Query string is required.' });
       return;
     }
 
-    const userLocation = location || 'US';
-
-    // Push search query details to the background queue
-    await QueueService.push(query, userLocation);
+    // Push search query details to the background queue without location metadata
+    await QueueService.push(query);
 
     res.status(202).json({
       success: true,

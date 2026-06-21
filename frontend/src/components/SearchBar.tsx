@@ -5,14 +5,12 @@ interface Suggestion {
   query: string;
   frequency: number;
   trending_score: number;
-  user_location: string;
   timestamp: string;
 }
 
 export const SearchBar: React.FC = () => {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [location, setLocation] = useState('US');
   const [latency, setLatency] = useState<string | null>(null);
   const [cacheStatus, setCacheStatus] = useState<string | null>(null);
   const [redisNode, setRedisNode] = useState<string | null>(null);
@@ -24,12 +22,12 @@ export const SearchBar: React.FC = () => {
   const debouncedInput = useDebounce(input, 300);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch top trending searches on mount and when location changes
+  // Fetch top trending searches on mount
   useEffect(() => {
     fetchTrending();
   }, []);
 
-  // Fetch suggestions when debounced input or location changes
+  // Fetch suggestions when debounced input changes
   useEffect(() => {
     if (debouncedInput.trim() === '') {
       setSuggestions([]);
@@ -38,9 +36,9 @@ export const SearchBar: React.FC = () => {
       setRedisNode(null);
       return;
     }
-    fetchSuggestions(debouncedInput, location);
-    fetchCacheDebug(debouncedInput, location);
-  }, [debouncedInput, location]);
+    fetchSuggestions(debouncedInput);
+    fetchCacheDebug(debouncedInput);
+  }, [debouncedInput]);
 
   // Handle clicking outside of dropdown to close it
   useEffect(() => {
@@ -63,10 +61,10 @@ export const SearchBar: React.FC = () => {
     }
   };
 
-  const fetchSuggestions = async (query: string, loc: string) => {
+  const fetchSuggestions = async (query: string) => {
     try {
       const startTime = performance.now();
-      const response = await fetch(`http://localhost:5000/suggestions?q=${encodeURIComponent(query)}&location=${loc}`);
+      const response = await fetch(`http://localhost:5000/suggestions?q=${encodeURIComponent(query)}`);
       const data = await response.json();
       
       const endTime = performance.now();
@@ -82,9 +80,9 @@ export const SearchBar: React.FC = () => {
     }
   };
 
-  const fetchCacheDebug = async (query: string, loc: string) => {
+  const fetchCacheDebug = async (query: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/cache/debug?prefix=${encodeURIComponent(query)}&location=${loc}`);
+      const response = await fetch(`http://localhost:5000/cache/debug?prefix=${encodeURIComponent(query)}`);
       const data = await response.json();
       setRedisNode(data.assignedNode);
     } catch (error) {
@@ -100,7 +98,7 @@ export const SearchBar: React.FC = () => {
       await fetch('http://localhost:5000/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery, location })
+        body: JSON.stringify({ query: searchQuery })
       });
 
       // 2. Add to local recent searches
@@ -173,28 +171,10 @@ export const SearchBar: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto" ref={dropdownRef}>
-      {/* Search Header Config Bar */}
+      {/* Search Header Info Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4 text-sm">
-        {/* Personalization Selector */}
-        <div className="flex items-center gap-2 text-gray-400">
-          <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span>Region Personalization:</span>
-          <select
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="px-2 py-1 bg-gray-900 border border-gray-800 rounded text-gray-200 focus:outline-none focus:border-indigo-500"
-          >
-            <option value="US">United States (US)</option>
-            <option value="IN">India (IN)</option>
-            <option value="GB">United Kingdom (GB)</option>
-            <option value="CA">Canada (CA)</option>
-            <option value="AU">Australia (AU)</option>
-            <option value="DE">Germany (DE)</option>
-            <option value="FR">France (FR)</option>
-          </select>
+        <div className="text-xs text-gray-400">
+          Stateless Prefix Database Query Engine
         </div>
 
         {/* Real-time metrics */}
@@ -202,7 +182,7 @@ export const SearchBar: React.FC = () => {
           {latency && (
             <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-900 border border-gray-800 text-gray-300">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-              API: {latency}
+              Latency: {latency}
             </span>
           )}
           {cacheStatus && (
@@ -262,7 +242,6 @@ export const SearchBar: React.FC = () => {
               {suggestions.length > 0 ? (
                 suggestions.map((suggestion, index) => {
                   const isTrending = suggestion.trending_score > 35;
-                  const isGeoMatch = suggestion.user_location.toUpperCase() === location.toUpperCase();
 
                   return (
                     <div
@@ -290,11 +269,6 @@ export const SearchBar: React.FC = () => {
 
                       {/* Score Meta Labels */}
                       <div className="flex items-center gap-2">
-                        {isGeoMatch && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-indigo-500/20 text-indigo-400">
-                            Local
-                          </span>
-                        )}
                         {isTrending && (
                           <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-500/20 text-red-400">
                             Trending
@@ -313,7 +287,7 @@ export const SearchBar: React.FC = () => {
             </div>
           )}
 
-          {/* Trending Searches Section (shown when input is empty or at the bottom of dropdown) */}
+          {/* Trending Searches Section */}
           {(input.trim() === '' && trending.length > 0) && (
             <div className="border-t border-gray-800/80">
               <div className="px-6 pt-4 pb-2 text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">

@@ -17,11 +17,11 @@ export const getTrendingSearches = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // Fetch top 10 trending items from MongoDB
+    // Fetch top 10 trending items from MongoDB (no location parameter)
     const trending = await QueryModel.find({})
       .sort({ trending_score: -1 })
       .limit(10)
-      .select('query frequency trending_score user_location -_id');
+      .select('query frequency trending_score -_id');
 
     // Cache the result for 60 seconds
     await redis.set(CACHE_KEY, JSON.stringify(trending), 'EX', 60);

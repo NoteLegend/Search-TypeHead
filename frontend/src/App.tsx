@@ -9,16 +9,16 @@ function App() {
           {/* Logo Badge */}
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 mb-6">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-            System Architecture Demo
+            System Design Architecture Demo
           </span>
 
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
-            Next-Gen <span className="text-glow-gradient">Search Typeahead</span>
+            Search <span className="text-glow-gradient">Typeahead Autocomplete</span>
           </h1>
           <p className="text-base text-gray-400">
-            Real-time, personalized, and typo-tolerant prefix suggestion engine. 
-            Powered by an in-memory Trie index, distributed cache-aside routing with consistent hashing, 
-            and asynchronous batch decay workers.
+            Real-time, scalable, and typo-tolerant prefix suggestion engine. 
+            Powered by a prefix-indexed database, distributed cache-aside routing with consistent hashing, 
+            and an embedded asynchronous batch aggregation worker.
           </p>
         </div>
 
@@ -47,13 +47,13 @@ function App() {
             <div className="flex items-center gap-2 mb-3">
               <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 113.536 0V21h2v-2.243a5 5 0 013.536 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-white">In-Memory Trie</h3>
+              <h3 className="font-semibold text-white">Prefix DB Querying</h3>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Loads 105k product terms into a fast character-based tree for O(K) prefix resolution, falling back to Levenshtein fuzzy searches.
+              Resolves prefix matching directly via an optimized MongoDB compound index. This provides stateless, scalable, and memory-efficient lookup.
             </p>
           </div>
 
@@ -67,7 +67,7 @@ function App() {
               <h3 className="font-semibold text-white">Asynchronous Write Queue</h3>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Accepts query logs instantaneously on Redis queue, while a background thread aggregates hits and decays scores periodically.
+              Accepts query logs instantaneously on Redis queue, while an embedded background task aggregates hits and decays scores periodically.
             </p>
           </div>
         </div>

@@ -1,12 +1,15 @@
 import { Request, Response } from 'express';
 import { CacheService } from '../services/cache';
-import { trie } from '../services/trie-instance';
+import { QueryModel } from '../models/query.model';
+
+function escapeRegex(text: string): string {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
 
 export const getSuggestions = async (req: Request, res: Response): Promise<void> => {
   const startTime = performance.now();
   try {
     const queryParam = req.query.q as string;
-    const location = (req.query.location as string) || 'US';
 
     if (!queryParam || queryParam.trim() === '') {
       res.json([]);
@@ -16,7 +19,7 @@ export const getSuggestions = async (req: Request, res: Response): Promise<void>
     const prefix = queryParam.trim().toLowerCase();
 
     // 1. Try fetching from the Consistent Hash Ring Redis Cache
-    const cached = await CacheService.getSuggestions(prefix, location);
+    const cached = await CacheService.getSuggestions(prefix);
     
     if (cached) {
       const endTime = performance.now();
@@ -26,16 +29,29 @@ export const getSuggestions = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // 2. Cache Miss: Perform in-memory Trie matching
-    const suggestions = trie.suggest(prefix, location, 10);
+    // 2. Cache Miss: Query MongoDB directly with prefix matching
+    const escapedPrefix = escapeRegex(prefix);
+    const databaseSuggestions = await QueryModel.find({
+      query: { $regex: `^${escapedPrefix}`, $options: 'i' }
+    })
+      .sort({ trending_score: -1, frequency: -1 })
+      .limit(10)
+      .select('query frequency trending_score timestamp -_id');
 
     // 3. Write back to Redis asynchronously
-    await CacheService.setSuggestions(prefix, location, suggestions);
+    const cachePayload = databaseSuggestions.map(doc => ({
+      query: doc.query,
+      frequency: doc.frequency,
+      trending_score: doc.trending_score,
+      timestamp: doc.timestamp
+    }));
+
+    await CacheService.setSuggestions(prefix, cachePayload);
 
     const endTime = performance.now();
     res.setHeader('X-Cache', 'MISS');
     res.setHeader('X-Response-Time', `${(endTime - startTime).toFixed(2)}ms`);
-    res.json(suggestions);
+    res.json(cachePayload);
   } catch (error: any) {
     console.error('Error in /suggestions:', error);
     res.status(500).json({ error: 'Internal Server Error', message: error.message });
