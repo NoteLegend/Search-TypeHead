@@ -1,26 +1,20 @@
 # Search Typeahead Autocomplete System
 
-A highly scalable, production-ready Search Typeahead (autocomplete) system designed to handle 100k+ Daily Active Users (DAU) with sub-50ms latency. The system features a stateless prefix query design, distributed cache-aside routing via a consistent hash ring, and an embedded background log-aggregation worker with exponential decay trending scores.
+A highly scalable, production-ready Search Typeahead (autocomplete) system designed to handle 100k+ Daily Active Users (DAU) with sub-50ms latency. The system features a stateless, database-driven prefix query design, distributed cache-aside routing via a consistent hash ring, and an embedded background log-aggregation worker with exponential decay trending scores.
 
 ---
 
-## Architectural Choices & Scalability
+## Architectural Design & Scalability
 
-### Why We Removed the Stateful In-Memory Trie
-While in-memory Tries (Prefix Trees) offer fast query lookups, they introduce major architectural bottlenecks in production distributed environments:
-1. **Memory Footprint**: Keeping millions of search terms in RAM on every application server leads to high memory bloat, especially as the search corpus grows.
-2. **State Synchronization Complexity**: In a multi-instance backend, keeping in-memory Tries synchronized in real-time when new searches are logged requires complex coordination (e.g., Redis Pub/Sub broadcast or database polling). Any lag results in inconsistent suggestions across instances.
-3. **Cold Boot Latency**: Rebuilding a large Trie in memory on server boot requires scanning the entire database, causing long boot delays (cold starts) before a server can accept traffic.
-
-### Our Solution: Stateless Prefix DB Querying
-We replaced the in-memory Trie with a **Stateless prefix matching architecture**:
+### Stateless Prefix Database Querying
+To achieve horizontal scalability and low latency, the system utilizes a stateless prefix matching architecture:
 - **Indexed DB Queries**: We utilize an optimized compound index on MongoDB: `{ query: 1, trending_score: -1, frequency: -1 }`.
-- **Stateless Scaling**: Backend servers remain completely stateless. They query MongoDB using a fast regex prefix match (`/^prefix/i`) and sort results by trending score and frequency. This allows us to scale Express instances horizontally behind a load balancer with zero sync overhead.
+- **Stateless Scaling**: Backend servers remain completely stateless. They query MongoDB using a fast regex prefix match (`/^prefix/i`) and sort results by trending score and frequency. This allows Express instances to scale horizontally behind a load balancer with zero state synchronization overhead.
 - **Cache-Aside Routing**: A Consistent Hash Ring routes and caches frequent prefix results on Redis nodes (ports 6379, 6380, and 6381) with a 5-minute TTL. This bypasses the database completely for high-traffic keystrokes, maintaining sub-15ms p95 latencies.
 
 ---
 
-## System Architecture
+## System Architecture Diagram
 
 ```mermaid
 graph TD
@@ -52,7 +46,7 @@ graph TD
 │   ├── src/
 │   │   ├── config/
 │   │   │   ├── db.ts               # MongoDB + Redis Connections
-│   │   │   └── hash-ring.ts        # Consistent Hashing FNV-1a Ring router
+│   │   │   └── hash-ring.ts        # FNV-1a Hash Ring (consistent hashing)
 │   │   ├── models/
 │   │   │   ├── query.model.ts      # Aggregated queries model (indexed)
 │   │   │   └── search-log.model.ts # Raw search log model

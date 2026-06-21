@@ -4,7 +4,9 @@ import routes from './routes';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  exposedHeaders: ['X-Cache', 'X-Response-Time']
+}));
 app.use(express.json());
 
 // Main Router API mounts on the root
